@@ -95,25 +95,11 @@
   </div>
 
   <div class="step">
-    <p class="step-title"><span class="num">2</span>Выбери формат</p>
-
-    <div class="grp">
-      <p class="pill-label">Откуда (можно оставить «Авто»)</p>
-      <div class="pills" id="src">
-        <div class="pill on small" data-lang="auto">Авто</div>
-        <div class="pill small" data-lang="ru">РУ</div>
-        <div class="pill small" data-lang="en">АНГЛ</div>
-        <div class="pill small" data-lang="pl">ПОЛЬ</div>
-      </div>
-    </div>
-
-    <div class="grp">
-      <p class="pill-label">Куда</p>
-      <div class="pills" id="tgt">
-        <div class="pill" data-lang="ru">РУ</div>
-        <div class="pill on" data-lang="en">АНГЛ</div>
-        <div class="pill" data-lang="pl">ПОЛЬ</div>
-      </div>
+    <p class="step-title"><span class="num">2</span>Выбери нужный формат</p>
+    <div class="pills" id="tgt">
+      <div class="pill" data-lang="ru">РУ</div>
+      <div class="pill on" data-lang="en">АНГЛ</div>
+      <div class="pill" data-lang="pl">ПОЛЬ</div>
     </div>
   </div>
 
@@ -261,7 +247,7 @@
   var NAME = { ru:"Русский", en:"Английский", pl:"Польский", unknown:"—" };
 
   // ---- Состояние UI ----
-  var state = { src:"auto", tgt:"en" };
+  var state = { tgt:"en" };
 
   var inEl   = document.getElementById("input");
   var outEl  = document.getElementById("output");
@@ -284,7 +270,6 @@
       convert();
     });
   }
-  bindGroup("src","src");
   bindGroup("tgt","tgt");
 
   function convert(){
