@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Конвертер аккаунтов</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#141c2e;
+    --panel-2:#1b2540;
+    --line:#26314f;
+    --txt:#e8eefc;
+    --muted:#8ea2c9;
+    --accent:#3a86ff;
+    --accent-press:#2f6fe0;
+    --ok:#31c48d;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+  body{padding:16px calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    max-width:680px;margin:0 auto}
+
+  h1{font-size:20px;font-weight:700;margin:2px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+
+  .step{margin-bottom:18px}
+  .step-title{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px}
+  .num{display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;background:var(--panel-2);
+    color:var(--txt);font-size:12px;font-weight:700;margin-right:8px}
+
+  textarea{width:100%;background:var(--panel);color:var(--txt);
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;font-size:16px;line-height:1.45;resize:vertical;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  #input{min-height:150px}
+  #output{min-height:150px;background:var(--panel-2)}
+  ::placeholder{color:#5f7099}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .pill-label{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{flex:1 1 auto;min-width:64px;text-align:center;
+    background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:999px;padding:11px 12px;font-size:15px;font-weight:600;
+    cursor:pointer;user-select:none;transition:.12s}
+  .pill:active{transform:scale(.97)}
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pill.small{flex:0 1 auto;font-size:14px;padding:9px 14px}
+
+  .grp{margin-bottom:12px}
+
+  .btn{width:100%;border:none;border-radius:var(--radius);
+    padding:15px;font-size:16px;font-weight:700;cursor:pointer;transition:.12s}
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:active{background:var(--accent-press)}
+  .btn.ghost{background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+
+  .mini{display:flex;gap:8px}
+  .mini .btn{padding:12px;font-size:14px}
+
+  .status{font-size:13px;color:var(--muted);margin:12px 0 8px;
+    display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .status b{color:var(--txt);font-weight:600}
+  .dot{color:var(--accent)}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:var(--ok);color:#04150e;font-weight:700;padding:12px 20px;
+    border-radius:999px;opacity:0;pointer-events:none;transition:.2s;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .foot{color:#5f7099;font-size:12px;text-align:center;margin-top:22px;line-height:1.5}
+</style>
+</head>
+<body>
+
+  <h1>Конвертер аккаунтов PSN</h1>
+  <p class="sub">Вставь аккаунты → выбери формат → скопируй. Формат источника определяется сам.</p>
+
+  <div class="step">
+    <p class="step-title"><span class="num">1</span>Вставь аккаунты</p>
+    <textarea id="input" placeholder="Вставь сюда один или несколько аккаунтов.&#10;Несколько — разделяй строкой из дефисов (--------)."></textarea>
+    <div class="row mini">
+      <button class="btn ghost" id="pasteBtn">Вставить из буфера</button>
+      <button class="btn ghost" id="clearBtn">Очистить</button>
+    </div>
+  </div>
+
+  <div class="step">
+    <p class="step-title"><span class="num">2</span>Выбери формат</p>
+
+    <div class="grp">
+      <p class="pill-label">Откуда (можно оставить «Авто»)</p>
+      <div class="pills" id="src">
+        <div class="pill on small" data-lang="auto">Авто</div>
+        <div class="pill small" data-lang="ru">РУ</div>
+        <div class="pill small" data-lang="en">АНГЛ</div>
+        <div class="pill small" data-lang="pl">ПОЛЬ</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <p class="pill-label">Куда</p>
+      <div class="pills" id="tgt">
+        <div class="pill" data-lang="ru">РУ</div>
+        <div class="pill on" data-lang="en">АНГЛ</div>
+        <div class="pill" data-lang="pl">ПОЛЬ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <p class="step-title"><span class="num">3</span>Результат</p>
+    <div class="status">
+      <span>Найдено аккаунтов: <b id="cnt">0</b></span>
+      <span>Формат источника: <b id="detected">—</b></span>
+    </div>
+    <textarea id="output" readonly placeholder="Здесь появится готовый результат…"></textarea>
+    <div class="row">
+      <button class="btn primary" id="copyBtn">Скопировать результат</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SEP = "----------------------------------------------------"; // 52 дефиса
+
+  // Метки для КАЖДОГО языка. Поля:
+  // login, ps_pass, mail_pass, dob, google, codes
+  var LABELS = {
+    ru: {
+      login:     "Почта для входа Playstation:",
+      ps_pass:   "Пароль для входа Playstation:",
+      mail_pass: "Почта пароль:",
+      dob:       "Дата рождения:",
+      google:    "2ФА (Google):",
+      codes:     "2ФА резервные коды:"
+    },
+    en: {
+      login:     "Mail -",
+      ps_pass:   "Pass psn -",
+      mail_pass: "Pass mail -",
+      dob:       "Birth -",
+      google:    "Google -",
+      codes:     "Codes -"
+    },
+    pl: {
+      login:     "Login -",
+      ps_pass:   "Hasło PS -",
+      mail_pass: "Hasło Mail -",
+      dob:       "Data -",
+      codes:     "Kody jednorazowe dwuetapowa weryfikacja:"
+      // google в польском формате идёт без метки, отдельной строкой
+    }
+  };
+
+  // Плоский список всех меток для парсинга (сортируем по длине — длинные вперёд).
+  var ALL = [];
+  Object.keys(LABELS).forEach(function(lang){
+    Object.keys(LABELS[lang]).forEach(function(field){
+      ALL.push({ label: LABELS[lang][field], field: field });
+    });
+  });
+  ALL.sort(function(a,b){ return b.label.length - a.label.length; });
+
+  // Разбиваем весь текст на аккаунты по строке-разделителю (5+ дефисов).
+  function splitAccounts(text){
+    var lines = text.split(/\r?\n/);
+    var blocks = [], cur = [];
+    for (var i=0;i<lines.length;i++){
+      if (/^\s*-{5,}\s*$/.test(lines[i])){
+        if (cur.join("").trim()) blocks.push(cur.join("\n"));
+        cur = [];
+      } else {
+        cur.push(lines[i]);
+      }
+    }
+    if (cur.join("").trim()) blocks.push(cur.join("\n"));
+    return blocks;
+  }
+
+  // Парсим один блок в универсальную структуру.
+  function parseBlock(block){
+    var data = { login:"", ps_pass:"", mail_pass:"", dob:"", google:"", codes:"" };
+    var orphans = [];
+    var lines = block.split(/\r?\n/);
+    for (var i=0;i<lines.length;i++){
+      var line = lines[i].trim();
+      if (!line) continue;
+      var matched = false;
+      for (var j=0;j<ALL.length;j++){
+        if (line.indexOf(ALL[j].label) === 0){
+          var val = line.slice(ALL[j].label.length).trim();
+          if (data[ALL[j].field] === "") data[ALL[j].field] = val;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) orphans.push(line);
+    }
+    // Польский google без метки — берём оставшуюся строку.
+    if (!data.google && orphans.length){
+      data.google = orphans.join(" ").trim();
+    }
+    return data;
+  }
+
+  function render(d, lang){
+    if (lang === "ru"){
+      return [
+        "Почта для входа Playstation: " + d.login,
+        "Пароль для входа Playstation: " + d.ps_pass,
+        "Почта пароль: " + d.mail_pass,
+        "Дата рождения: " + d.dob,
+        "2ФА (Google): " + d.google,
+        "2ФА резервные коды: " + d.codes
+      ].join("\n");
+    }
+    if (lang === "en"){
+      return [
+        "Mail - " + d.login,
+        "Pass psn - " + d.ps_pass,
+        "Pass mail - " + d.mail_pass,
+        "Birth - " + d.dob,
+        "Google - " + d.google,
+        "Codes - " + d.codes
+      ].join("\n");
+    }
+    // pl
+    return [
+      "Login - " + d.login,
+      "Hasło PS - " + d.ps_pass,
+      "Hasło Mail - " + d.mail_pass,
+      "Data - " + d.dob,
+      "",
+      "Kody jednorazowe dwuetapowa weryfikacja: " + d.codes,
+      "",
+      d.google
+    ].join("\n");
+  }
+
+  function detectLang(text){
+    if (/Почта для входа Playstation|2ФА/.test(text)) return "ru";
+    if (/Hasło PS|Kody jednorazowe/.test(text))       return "pl";
+    if (/Pass psn|Birth -|Codes -/.test(text))        return "en";
+    return "unknown";
+  }
+
+  var NAME = { ru:"Русский", en:"Английский", pl:"Польский", unknown:"—" };
+
+  // ---- Состояние UI ----
+  var state = { src:"auto", tgt:"en" };
+
+  var inEl   = document.getElementById("input");
+  var outEl  = document.getElementById("output");
+  var cntEl  = document.getElementById("cnt");
+  var detEl  = document.getElementById("detected");
+
+  function setActive(groupId, lang){
+    var pills = document.getElementById(groupId).querySelectorAll(".pill");
+    for (var i=0;i<pills.length;i++){
+      pills[i].classList.toggle("on", pills[i].getAttribute("data-lang") === lang);
+    }
+  }
+
+  function bindGroup(groupId, key){
+    document.getElementById(groupId).addEventListener("click", function(e){
+      var p = e.target.closest(".pill");
+      if (!p) return;
+      state[key] = p.getAttribute("data-lang");
+      setActive(groupId, state[key]);
+      convert();
+    });
+  }
+  bindGroup("src","src");
+  bindGroup("tgt","tgt");
+
+  function convert(){
+    var text = inEl.value;
+    var blocks = splitAccounts(text);
+    cntEl.textContent = blocks.length;
+    detEl.textContent = text.trim() ? NAME[detectLang(text)] : "—";
+
+    if (!blocks.length){ outEl.value = ""; return; }
+
+    var out = [];
+    for (var i=0;i<blocks.length;i++){
+      var d = parseBlock(blocks[i]);
+      out.push(render(d, state.tgt) + "\n" + SEP);
+    }
+    outEl.value = out.join("\n");
+  }
+
+  inEl.addEventListener("input", convert);
+
+  // ---- Кнопки ----
+  document.getElementById("clearBtn").addEventListener("click", function(){
+    inEl.value = ""; convert(); inEl.focus();
+  });
+
+  document.getElementById("pasteBtn").addEventListener("click", function(){
+    if (navigator.clipboard && navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(t){
+        inEl.value = t; convert(); toast("Вставлено");
+      }).catch(function(){ toast("Вставь вручную (долгое нажатие)"); });
+    } else {
+      toast("Вставь вручную (долгое нажатие)");
+    }
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    var t = outEl.value;
+    if (!t){ toast("Сначала вставь аккаунты"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toast("Скопировано"); })
+        .catch(function(){ legacyCopy(t); });
+    } else {
+      legacyCopy(t);
+    }
+  });
+
+  function legacyCopy(t){
+    outEl.removeAttribute("readonly");
+    outEl.focus();
+    outEl.setSelectionRange(0, t.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){}
+    outEl.setAttribute("readonly","readonly");
+    try { window.getSelection().removeAllRanges(); } catch(e){}
+    toast(ok ? "Скопировано" : "Выдели текст и скопируй");
+  }
+
+  var toastTimer;
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1600);
+  }
+
+  convert();
+})();
+</script>
+</body>
+</html>
