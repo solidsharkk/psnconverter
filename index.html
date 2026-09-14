@@ -179,7 +179,7 @@
 
   // Парсим один блок в универсальную структуру.
   function parseBlock(block){
-    var data = { login:"", ps_pass:"", mail_pass:"", dob:"", google:"", codes:"" };
+    var data = { login:"", ps_pass:"", mail_pass:"", dob:"", google:"", codes:"", extras:[] };
     var orphans = [];
     var lines = block.split(/\r?\n/);
     for (var i=0;i<lines.length;i++){
@@ -196,45 +196,68 @@
       }
       if (!matched) orphans.push(line);
     }
-    // Польский google без метки — берём оставшуюся строку.
+
+    // Строки без метки: это ключ Google (польский формат) + возможные
+    // "лишние" данные (карта, подпись и т.п.).
     if (!data.google && orphans.length){
-      data.google = orphans.join(" ").trim();
+      // Ключ Google — длинная строка без пробелов из букв и цифр.
+      var gi = -1;
+      for (var k=0;k<orphans.length;k++){
+        if (/^[A-Za-z0-9]{16,}$/.test(orphans[k]) && /[A-Za-z]/.test(orphans[k])){
+          gi = k; break;
+        }
+      }
+      if (gi === -1) gi = 0; // запасной вариант: первая строка без метки
+      data.google = orphans[gi];
+      for (var m=0;m<orphans.length;m++){
+        if (m !== gi) data.extras.push(orphans[m]);
+      }
+    } else {
+      // google уже нашёлся по метке (РУ/АНГЛ) — всё без метки это лишнее.
+      data.extras = orphans;
     }
+
     return data;
   }
 
   function render(d, lang){
+    var lines;
     if (lang === "ru"){
-      return [
+      lines = [
         "Почта для входа Playstation: " + d.login,
         "Пароль для входа Playstation: " + d.ps_pass,
         "Почта пароль: " + d.mail_pass,
         "Дата рождения: " + d.dob,
         "2ФА (Google): " + d.google,
         "2ФА резервные коды: " + d.codes
-      ].join("\n");
-    }
-    if (lang === "en"){
-      return [
+      ];
+    } else if (lang === "en"){
+      lines = [
         "Mail - " + d.login,
         "Pass psn - " + d.ps_pass,
         "Pass mail - " + d.mail_pass,
         "Birth - " + d.dob,
         "Google - " + d.google,
         "Codes - " + d.codes
-      ].join("\n");
+      ];
+    } else { // pl
+      lines = [
+        "Login - " + d.login,
+        "Hasło PS - " + d.ps_pass,
+        "Hasło Mail - " + d.mail_pass,
+        "Data - " + d.dob,
+        "",
+        "Kody jednorazowe dwuetapowa weryfikacja: " + d.codes,
+        "",
+        d.google
+      ];
     }
-    // pl
-    return [
-      "Login - " + d.login,
-      "Hasło PS - " + d.ps_pass,
-      "Hasło Mail - " + d.mail_pass,
-      "Data - " + d.dob,
-      "",
-      "Kody jednorazowe dwuetapowa weryfikacja: " + d.codes,
-      "",
-      d.google
-    ].join("\n");
+    // Лишние строки (карта, подпись) — вниз аккаунта через пустую строку.
+    if (d.extras && d.extras.length){
+      lines.push("");
+      lines = lines.concat(d.extras);
+    }
+    return lines.join("\n");
   }
 
   function detectLang(text){
@@ -283,9 +306,10 @@
     var out = [];
     for (var i=0;i<blocks.length;i++){
       var d = parseBlock(blocks[i]);
-      out.push(render(d, state.tgt) + "\n" + SEP);
+      out.push(render(d, state.tgt));
     }
-    outEl.value = out.join("\n");
+    // Палочка только МЕЖДУ аккаунтами: для одного — без разделителя.
+    outEl.value = out.join("\n" + SEP + "\n");
   }
 
   inEl.addEventListener("input", convert);
